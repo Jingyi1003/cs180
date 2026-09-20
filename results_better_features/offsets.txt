@@ -1,0 +1,1 @@
+emir.tif: green (49, 24), red (107, 40)
