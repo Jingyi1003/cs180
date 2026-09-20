@@ -1,234 +1,198 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS180 Project 1</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.5;
-      color: #222;
-      background: #fafafa;
-    }
-    main {
-      max-width: 1050px;
-      margin: 0 auto;
-      padding: 32px 20px 60px;
-    }
-    h1 {
-      margin-bottom: 6px;
-      font-size: 34px;
-    }
-    h2 {
-      margin-top: 36px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #ccc;
-    }
-    p {
-      max-width: 850px;
-    }
-    code {
-      background: #eee;
-      padding: 2px 4px;
-      border-radius: 3px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
-      margin-top: 16px;
-    }
-    figure {
-      margin: 0;
-      background: white;
-      border: 1px solid #ddd;
-      padding: 10px;
-    }
-    img {
-      width: 100%;
-      display: block;
-      cursor: zoom-in;
-    }
-    figcaption {
-      margin-top: 8px;
-      font-size: 14px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: white;
-      margin-top: 14px;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background: #eee;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>CS180 Project 1</h1>
-    <p>
-      In this project, I colorized Prokudin-Gorskii glass plate images. Each input image has
-      three grayscale images stacked vertically in BGR order. I split the image into B, G,
-      and R channels, aligned G and R to B, and stacked them into one RGB image.
-    </p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 0: Becoming Friends with Your Camera</title>
+    <meta
+      name="description"
+      content="A photography project exploring perspective, focal length, zoom, and the center of projection."
+    />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Section navigation">
+        <a href="#portrait">Portrait</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#dolly">Dolly Zoom</a>
+        <a href="#reflection">Reflection</a>
+      </nav>
+    </header>
 
-    <h2>Single-Scale Alignment</h2>
-    <p>
-      For the small JPG images, I used an exhaustive search over shifts from
-      <code>-15</code> to <code>15</code> pixels in both directions. I used sum of squared
-      differences as the score. I cropped the border before scoring so the black and white
-      borders would not affect the result too much.
-    </p>
-    <p>
-      For each candidate shift, I used <code>np.roll</code> to shift the channel, compared
-      the center crop to the blue channel, and kept the shift with the lowest SSD score.
-      I report shifts as <code>(dy, dx)</code>, where <code>dy</code> is vertical shift and
-      <code>dx</code> is horizontal shift.
-    </p>
-    <div class="grid">
-      <figure>
-        <img src="results/cathedral_result.jpg" alt="cathedral result">
-        <figcaption>cathedral.jpg, G: (5, 2), R: (12, 3)</figcaption>
-      </figure>
-      <figure>
-        <img src="results/monastery_result.jpg" alt="monastery result">
-        <figcaption>monastery.jpg, G: (-3, 2), R: (3, 2)</figcaption>
-      </figure>
-      <figure>
-        <img src="results/tobolsk_result.jpg" alt="tobolsk result">
-        <figcaption>tobolsk.jpg, G: (3, 3), R: (6, 3)</figcaption>
-      </figure>
-    </div>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-media">
+          <img
+            src="assets/images/hero.jpg"
+            alt="A selected project photograph showing perspective and depth"
+            data-placeholder="Hero image: replace assets/images/hero.jpg with your favorite project photo"
+          />
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">CS180 Project 0</p>
+          <h1 id="page-title">Camera Perspective</h1>
+          <p>
+            In this project, I took a few photo pairs to see how distance and zoom
+            change perspective.
+          </p>
+          <dl class="meta">
+            <div>
+              <dt>Name</dt>
+              <dd>Jingyi Ge</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>September 2026</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
 
-    <h2>Image Pyramid Alignment</h2>
-    <p>
-      The TIFF images are much larger, so single-scale search would be too slow. I used an
-      image pyramid. I downsampled the image by a factor of two until it was small, found the
-      shift at the small scale, then scaled the shift back up and refined it at each level.
-    </p>
-    <p>
-      The recursive function first aligns the smallest version of the image. When it returns
-      to the next level, I multiply the previous shift by 2 and only search a small window
-      around that estimate. This keeps the search fast while still allowing large shifts in
-      the original image.
-    </p>
-    <p>
-      For the pyramid version, I used normalized cross-correlation (NCC) on the cropped
-      image centers. I subtract the mean from both cropped images and compute their dot
-      product divided by the product of their norms. Higher NCC means a better match.
-    </p>
+      <section class="section intro" id="overview">
+        <div class="section-heading">
+          <p class="eyebrow">Overview</p>
+          <h2>Overview</h2>
+        </div>
+        <p>
+          The main thing I noticed is that zoom and moving the camera are not the same.
+          Zoom changes the size of the image, but moving the camera changes the
+          perspective.
+        </p>
+      </section>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Image</th>
-          <th>Green shift</th>
-          <th>Red shift</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>cathedral.jpg</td><td>(5, 2)</td><td>(12, 3)</td></tr>
-        <tr><td>monastery.jpg</td><td>(-3, 2)</td><td>(3, 2)</td></tr>
-        <tr><td>tobolsk.jpg</td><td>(3, 3)</td><td>(6, 3)</td></tr>
-        <tr><td>church.tif</td><td>(25, 4)</td><td>(58, -4)</td></tr>
-        <tr><td>emir.tif</td><td>(49, 24)</td><td>(64, 44)</td></tr>
-        <tr><td>harvesters.tif</td><td>(60, 17)</td><td>(124, 14)</td></tr>
-        <tr><td>icon.tif</td><td>(41, 17)</td><td>(89, 23)</td></tr>
-        <tr><td>ilemselga.tif</td><td>(40, 7)</td><td>(130, 11)</td></tr>
-        <tr><td>melons.tif</td><td>(81, 10)</td><td>(178, 14)</td></tr>
-        <tr><td>religous_painting.tif</td><td>(28, 3)</td><td>(68, 7)</td></tr>
-        <tr><td>self_portrait.tif</td><td>(79, 29)</td><td>(176, 37)</td></tr>
-        <tr><td>siren.tif</td><td>(49, -6)</td><td>(96, -25)</td></tr>
-        <tr><td>three_generations.tif</td><td>(52, 14)</td><td>(111, 11)</td></tr>
-        <tr><td>wharf.tif</td><td>(15, -7)</td><td>(82, -16)</td></tr>
-        <tr><td>extra_1.tif</td><td>(47, -12)</td><td>(86, -43)</td></tr>
-        <tr><td>extra_2.tif</td><td>(59, 6)</td><td>(124, -5)</td></tr>
-        <tr><td>extra_3.tif</td><td>(32, 51)</td><td>(84, 101)</td></tr>
-      </tbody>
-    </table>
+      <section class="section" id="portrait">
+        <div class="section-heading">
+          <p class="eyebrow">Part 1</p>
+          <h2>Selfie: The Wrong Way vs. The Right Way</h2>
+        </div>
+        <div class="comparison-grid">
+          <figure class="photo-card">
+            <img
+              src="assets/images/portrait-close.jpg"
+              alt="Close-up portrait taken from a short distance"
+              data-placeholder="Replace with your close-up portrait"
+            />
+            <figcaption>
+              <strong>Close camera position</strong>
+              The camera is very close, so the face looks more distorted.
+            </figcaption>
+          </figure>
+          <figure class="photo-card">
+            <img
+              src="assets/images/portrait-zoom.jpg"
+              alt="Portrait taken from farther away with zoom"
+              data-placeholder="Replace with your stepped-back zoom portrait"
+            />
+            <figcaption>
+              <strong>Stepped back with zoom</strong>
+              I stepped back and zoomed in, so the face looks more natural.
+            </figcaption>
+          </figure>
+        </div>
+        <div class="analysis-block">
+          <h3>What Changed?</h3>
+          <p>
+            In the first photo, the camera is too close, so the closest parts of the
+            face look bigger. In the second photo, the camera is farther away, so the
+            face proportions look more normal.
+          </p>
+        </div>
+      </section>
 
-    <div class="grid">
-      <figure><img src="results_pyramid/church_result.jpg" alt="church"><figcaption>church</figcaption></figure>
-      <figure><img src="results_pyramid/emir_result.jpg" alt="emir"><figcaption>emir, basic NCC</figcaption></figure>
-      <figure><img src="results_pyramid/harvesters_result.jpg" alt="harvesters"><figcaption>harvesters</figcaption></figure>
-      <figure><img src="results_pyramid/icon_result.jpg" alt="icon"><figcaption>icon</figcaption></figure>
-      <figure><img src="results_pyramid/ilemselga_result.jpg" alt="ilemselga"><figcaption>ilemselga</figcaption></figure>
-      <figure><img src="results_pyramid/melons_result.jpg" alt="melons"><figcaption>melons</figcaption></figure>
-      <figure><img src="results_pyramid/religous_painting_result.jpg" alt="religous painting"><figcaption>religous painting</figcaption></figure>
-      <figure><img src="results_pyramid/self_portrait_result.jpg" alt="self portrait"><figcaption>self portrait</figcaption></figure>
-      <figure><img src="results_pyramid/three_generations_result.jpg" alt="three generations"><figcaption>three generations</figcaption></figure>
-      <figure><img src="results_pyramid/siren_result.jpg" alt="siren"><figcaption>siren</figcaption></figure>
-      <figure><img src="results_pyramid/wharf_result.jpg" alt="wharf"><figcaption>wharf</figcaption></figure>
-    </div>
+      <section class="section" id="architecture">
+        <div class="section-heading">
+          <p class="eyebrow">Part 2</p>
+          <h2>Architectural Perspective Compression</h2>
+        </div>
+        <div class="comparison-grid">
+          <figure class="photo-card">
+            <img
+              src="assets/images/building-zoom.jpg"
+              alt="Building photographed from far away with zoom"
+              data-placeholder="Replace with your far-away zoomed building photo"
+            />
+            <figcaption>
+              <strong>Far away with zoom</strong>
+              From farther away, the buildings look more compressed.
+            </figcaption>
+          </figure>
+          <figure class="photo-card">
+            <img
+              src="assets/images/building-wide.jpg"
+              alt="Building photographed from closer up without zoom"
+              data-placeholder="Replace with your close wide-angle building photo"
+            />
+            <figcaption>
+              <strong>Closer without zoom</strong>
+              From closer up, the scene has a stronger sense of depth.
+            </figcaption>
+          </figure>
+        </div>
+        <div class="analysis-block">
+          <h3>Why Does the Zoomed View Look Flatter?</h3>
+          <p>
+            The zoomed photo looks flatter because it was taken from farther away.
+            When I moved closer, the nearby parts became larger compared with the
+            background, so the perspective looked stronger.
+          </p>
+        </div>
+      </section>
 
-    <h2>Additional Images</h2>
-    <p>
-      I also ran the same pyramid alignment on three additional glass negative images from
-      the Prokudin-Gorskii collection.
-    </p>
-    <div class="grid">
-      <figure>
-        <img src="results_pyramid/extra_1_result.jpg" alt="extra 1">
-        <figcaption>extra_1.tif, G: (47, -12), R: (86, -43)</figcaption>
-      </figure>
-      <figure>
-        <img src="results_pyramid/extra_2_result.jpg" alt="extra 2">
-        <figcaption>extra_2.tif, G: (59, 6), R: (124, -5)</figcaption>
-      </figure>
-      <figure>
-        <img src="results_pyramid/extra_3_result.jpg" alt="extra 3">
-        <figcaption>extra_3.tif, G: (32, 51), R: (84, 101)</figcaption>
-      </figure>
-    </div>
+      <section class="section dolly" id="dolly">
+        <div class="section-heading">
+          <p class="eyebrow">Part 3</p>
+          <h2>The Dolly Zoom</h2>
+        </div>
+        <div class="dolly-layout">
+          <figure class="photo-card feature-card">
+            <img
+              src="assets/gifs/dolly-zoom.gif"
+              alt="Animated dolly zoom made from still photos"
+              data-placeholder="Replace with your animated dolly zoom GIF"
+            />
+            <figcaption>
+              <strong>Animated result</strong>
+              The router stays near the same size while the background shifts.
+            </figcaption>
+          </figure>
+          <div class="analysis-block">
+            <h3>Shooting Process</h3>
+            <p>
+              I took several photos of the router while moving the camera and changing
+              zoom. The subject stays roughly the same size, but the background changes,
+              which makes a simple dolly zoom effect.
+            </p>
+          </div>
+        </div>
+        <div class="strip" aria-label="Dolly zoom frame strip">
+          <img src="assets/images/dolly-01.jpg" alt="Dolly zoom frame 1" />
+          <img src="assets/images/dolly-02.jpg" alt="Dolly zoom frame 2" />
+          <img src="assets/images/dolly-03.jpg" alt="Dolly zoom frame 3" />
+          <img src="assets/images/dolly-04.jpg" alt="Dolly zoom frame 4" />
+          <img src="assets/images/dolly-05.jpg" alt="Dolly zoom frame 5" />
+        </div>
+      </section>
 
-    <h2>Better Features: Gradient Alignment</h2>
-    <p>
-      The basic NCC result for <code>emir.tif</code> was not very good. The channels have
-      very different brightness values, especially on the robe, so raw pixel values are not
-      always a good feature. I tried using gradient magnitude instead. I found the shifts on
-      the gradient images, then applied those shifts to the original channels.
-    </p>
-    <p>
-      This was the main failure case for the basic method. With raw NCC, the red channel is
-      pulled to the wrong location because matching brightness is not the same as matching
-      structure. The gradient version uses edges instead, so it lines up the face, robe, and
-      background better.
-    </p>
-    <div class="grid">
-      <figure>
-        <img src="results_pyramid/emir_result.jpg" alt="basic emir result">
-        <figcaption>Basic NCC result: G (49, 24), R (64, 44)</figcaption>
-      </figure>
-      <figure>
-        <img src="results_better_features/emir_edge_result.jpg" alt="edge emir result">
-        <figcaption>Gradient feature result: G (49, 24), R (107, 40)</figcaption>
-      </figure>
-    </div>
+      <section class="section reflection" id="reflection">
+        <div class="section-heading">
+          <p class="eyebrow">Reflection</p>
+          <h2>What I Learned</h2>
+        </div>
+        <p>
+          Overall, I learned that camera position controls perspective. Zoom can make
+          the subject bigger or smaller, but moving closer or farther away changes the
+          shape and depth of the scene.
+        </p>
+      </section>
+    </main>
 
-    <h2>Notes</h2>
-    <p>
-      Some results still have colored borders because I did not implement automatic cropping.
-      The main content is aligned well for most images. I used the same parameters for all
-      images instead of tuning each one separately.
-    </p>
-  </main>
-  <script>
-    document.querySelectorAll("figure img").forEach(function(img) {
-      var link = document.createElement("a");
-      link.href = img.getAttribute("src");
-      link.target = "_blank";
-      img.parentNode.insertBefore(link, img);
-      link.appendChild(img);
-    });
-  </script>
-</body>
+    <footer class="footer">
+      <p>
+        CS180 Project 0
+      </p>
+    </footer>
+
+    <script src="assets/js/placeholders.js"></script>
+  </body>
 </html>
