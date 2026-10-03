@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 2: Fun with Filters and Frequencies</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="course">CS180 / CS280A Project 2</p>
+      <h1>Fun with Filters and Frequencies</h1>
+    </header>
+
+    <section>
+      <h2>Part 1.1: Convolutions from Scratch</h2>
+      <p>
+        I implemented 2D convolution in two ways: one version with four nested
+        loops and one version with two loops plus NumPy array operations. In
+        both versions I flipped the kernel before applying it, so the operation
+        is convolution rather than correlation. I used zero padding to keep the
+        output the same size as the input.
+      </p>
+
+      <p>Four-loop implementation:</p>
+
+      <pre><code>kernel = np.flip(kernel)
+kh, kw = kernel.shape
+padded = np.pad(img, ((kh // 2, kh // 2), (kw // 2, kw // 2)))
+out = np.zeros_like(img, dtype=float)
+
+for i in range(img.shape[0]):
+    for j in range(img.shape[1]):
+        for a in range(kh):
+            for b in range(kw):
+                out[i, j] += padded[i + a, j + b] * kernel[a, b]</code></pre>
+
+      <p>Two-loop implementation:</p>
+
+      <pre><code>kernel = np.flip(kernel)
+kh, kw = kernel.shape
+padded = np.pad(img, ((kh // 2, kh // 2), (kw // 2, kw // 2)))
+out = np.zeros_like(img, dtype=float)
+
+for i in range(img.shape[0]):
+    for j in range(img.shape[1]):
+        patch = padded[i:i + kh, j:j + kw]
+        out[i, j] = np.sum(patch * kernel)</code></pre>
+
+      <div class="grid five">
+        <figure>
+          <img src="results/1_1/original_gray.png" alt="Input image in grayscale">
+          <figcaption>Input grayscale image</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_1/box_filter.png" alt="Image after 9 by 9 box filter">
+          <figcaption>9x9 box filter</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_1/dx.png" alt="Dx convolution result">
+          <figcaption>D<sub>x</sub></figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_1/dy.png" alt="Dy convolution result">
+          <figcaption>D<sub>y</sub></figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_1/gradient_magnitude.png" alt="Gradient magnitude result">
+          <figcaption>Gradient magnitude</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        The two custom implementations matched each other with max error
+        <code>5.55e-17</code>. Compared with <code>convolve2d</code>, the box
+        filter error was <code>2.44e-15</code>, and the derivative filter errors
+        were <code>0.0</code>.
+      </p>
+
+      <p>
+        On a 150x150 crop with the 9x9 box filter, the four-loop version took
+        about <code>0.36s</code>, the two-loop version took about
+        <code>0.034s</code>, and <code>scipy.signal.convolve2d</code> took
+        about <code>0.0015s</code>. The two-loop version is faster because each
+        output pixel uses a NumPy dot product instead of looping over the kernel
+        entries in Python, and SciPy is much faster because the inner loops are
+        implemented in optimized compiled code.
+      </p>
+    </section>
+
+    <section>
+      <h2>Part 1.2: Finite Difference Operator</h2>
+      <p>
+        I convolved the cameraman image with finite difference filters
+        <code>D_x = [1, 0, -1]</code> and <code>D_y = [1, 0, -1]^T</code>. From
+        these derivatives, I computed the gradient magnitude and thresholded it
+        to create a binary edge image.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/1_2/cameraman_dx.png" alt="Cameraman derivative in x">
+          <figcaption>D<sub>x</sub></figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_2/cameraman_dy.png" alt="Cameraman derivative in y">
+          <figcaption>D<sub>y</sub></figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_2/cameraman_gradient.png" alt="Cameraman gradient magnitude">
+          <figcaption>Gradient magnitude</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_2/cameraman_edges.png" alt="Binary edge image">
+          <figcaption>Edges, threshold = 0.20</figcaption>
+        </figure>
+      </div>
+
+      <figure class="wide">
+        <img src="results/1_2/threshold_comparison.png" alt="Threshold comparison">
+        <figcaption>Threshold comparison for 0.10, 0.15, 0.20, and 0.25</figcaption>
+      </figure>
+
+      <p>
+        I tried thresholds <code>0.10</code>, <code>0.15</code>,
+        <code>0.20</code>, and <code>0.25</code>. I chose <code>0.20</code>
+        because it keeps the main cameraman and camera edges while removing more
+        of the background noise than the smaller thresholds.
+      </p>
+    </section>
+
+    <section>
+      <h2>Part 1.3: Derivative of Gaussian Filter</h2>
+      <p>
+        The finite difference result is noisy, so I first smoothed the image
+        using a Gaussian filter made with <code>cv2.getGaussianKernel(9, 1.5)</code>.
+        After blurring, I repeated the derivative, gradient magnitude, and
+        thresholding steps. The resulting edge image is cleaner because the
+        Gaussian removes high-frequency noise before differentiation.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/1_3/blurred.png" alt="Blurred cameraman image">
+          <figcaption>Gaussian blurred image</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/dx_blurred.png" alt="Dx after Gaussian blur">
+          <figcaption>D<sub>x</sub> after blur</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/gradient_blurred.png" alt="Gradient magnitude after Gaussian blur">
+          <figcaption>Gradient after blur</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/edges_blurred.png" alt="Edges after Gaussian blur">
+          <figcaption>Edges, threshold = 0.10</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        I then created derivative-of-Gaussian filters by convolving the Gaussian
+        filter with <code>D_x</code> and <code>D_y</code>. This lets us combine
+        smoothing and differentiation into one convolution per direction.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/1_3/DoG_x.png" alt="Derivative of Gaussian x filter">
+          <figcaption>DoG x filter</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/DoG_y.png" alt="Derivative of Gaussian y filter">
+          <figcaption>DoG y filter</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/gradient_DoG.png" alt="Gradient result from DoG filters">
+          <figcaption>Gradient from DoG</figcaption>
+        </figure>
+        <figure>
+          <img src="results/1_3/edges_DoG.png" alt="Edges from DoG filters">
+          <figcaption>Edges from DoG</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        To verify the single-convolution DoG method, I compared it with the
+        blur-then-derivative method away from the image boundary. The max
+        differences were <code>1.06e-15</code> for x, <code>1.15e-15</code> for
+        y, and <code>1.13e-15</code> for gradient magnitude, so the two methods
+        agree up to numerical precision.
+      </p>
+    </section>
+
+    <section>
+      <h2>Part 2.1: Image Sharpening</h2>
+      <p>
+        I implemented unsharp masking. First I blur the image with a Gaussian
+        filter to get the low-frequency component. Then I subtract the blurred
+        image from the original to get high frequencies, and add those details
+        back with a scale factor <code>alpha</code>:
+        <code>sharpened = image + alpha * (image - blurred)</code>.
+        Equivalently, this can be written as one convolution with the unsharp
+        mask kernel <code>K = (1 + alpha) * delta - alpha * G</code>.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_1/taj_original.png" alt="Original Taj Mahal image">
+          <figcaption>Original Taj Mahal</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_blurred.png" alt="Blurred Taj Mahal image">
+          <figcaption>Gaussian blurred</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_high_frequency.png" alt="High frequency Taj Mahal image">
+          <figcaption>High frequencies</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_sharpened_alpha_2.png" alt="Sharpened Taj Mahal image">
+          <figcaption>Sharpened, alpha = 2.0</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        Increasing <code>alpha</code> makes edges and texture stronger, but too
+        much sharpening starts to create halos and an unnatural contrast around
+        strong edges.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_1/taj_alpha_0_5.png" alt="Taj alpha 0.5">
+          <figcaption>alpha = 0.5</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_alpha_1_0.png" alt="Taj alpha 1.0">
+          <figcaption>alpha = 1.0</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_alpha_2_0.png" alt="Taj alpha 2.0">
+          <figcaption>alpha = 2.0</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/taj_alpha_3_0.png" alt="Taj alpha 3.0">
+          <figcaption>alpha = 3.0</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        I also tried the same process on another image of my choice. The
+        sharpened output makes architectural edges, window details, and
+        building textures more visible.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_1/choice_original.png" alt="Original choice image">
+          <figcaption>Original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/choice_blurred.png" alt="Blurred choice image">
+          <figcaption>Blurred</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/choice_high_frequency.png" alt="Choice image high frequencies">
+          <figcaption>High frequencies</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/choice_sharpened.png" alt="Sharpened choice image">
+          <figcaption>Sharpened</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        For evaluation, I blurred a sharp image and tried to sharpen it again.
+        The resharpened image recovers some edge contrast, but it does not fully
+        match the original because blur removes high-frequency information that
+        cannot be perfectly recovered.
+      </p>
+
+      <div class="grid three">
+        <figure>
+          <img src="results/2_1/eval_original_sharp.png" alt="Original sharp evaluation image">
+          <figcaption>Original sharp image</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/eval_blurred.png" alt="Blurred evaluation image">
+          <figcaption>Blurred</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_1/eval_resharpened.png" alt="Resharpened evaluation image">
+          <figcaption>Resharpened</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Part 2.2: Hybrid Images</h2>
+      <p>
+        I created hybrid images by combining the low frequencies of one aligned
+        image with the high frequencies of another:
+        <code>hybrid = blur(low image) + high image - blur(high image)</code>.
+        The result changes with viewing distance because nearby viewing shows
+        high-frequency details more strongly, while far-away viewing emphasizes
+        the low-frequency structure.
+      </p>
+
+      <h3>Original vs aligned inputs</h3>
+      <p>
+        Before filtering, I aligned each pair so the main features were in the
+        same position.
+      </p>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_2/cat_panda_original_high.png" alt="Original panda">
+          <figcaption>Panda original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/cat_panda_original_low.png" alt="Original cat">
+          <figcaption>Cat original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/cat_panda_high_input.png" alt="Aligned panda">
+          <figcaption>Panda aligned</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/cat_panda_low_input.png" alt="Aligned cat">
+          <figcaption>Cat aligned</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_2/derek_nutmeg_original_high.png" alt="Original Nutmeg">
+          <figcaption>Nutmeg original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/derek_nutmeg_original_low.png" alt="Original Derek">
+          <figcaption>Derek original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/derek_nutmeg_high_input_crop.png" alt="Aligned Nutmeg">
+          <figcaption>Nutmeg aligned</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/derek_nutmeg_low_input_crop.png" alt="Aligned Derek">
+          <figcaption>Derek aligned</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_2/dog_orange_cat_original_high.png" alt="Original orange cat">
+          <figcaption>Orange cat original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/dog_orange_cat_original_low.png" alt="Original dog">
+          <figcaption>Dog original</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/dog_orange_cat_high_input.png" alt="Aligned orange cat">
+          <figcaption>Orange cat aligned</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/dog_orange_cat_low_input.png" alt="Aligned dog">
+          <figcaption>Dog aligned</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid three">
+        <figure>
+          <img src="results/2_2/cat_panda_summary.png" alt="Cat and panda hybrid summary">
+          <figcaption>Panda + cat</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/derek_nutmeg_summary_crop.png" alt="Derek and Nutmeg hybrid summary">
+          <figcaption>Nutmeg + Derek</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/dog_orange_cat_summary.png" alt="Dog and orange cat hybrid summary">
+          <figcaption>Orange cat + dog</figcaption>
+        </figure>
+      </div>
+
+      <h3>Favorite result: Orange cat + dog</h3>
+      <p>
+        I chose the cutoffs by checking the hybrid at several displayed sizes.
+        For panda/cat I used <code>sigma_high = 1.2</code> and
+        <code>sigma_low = 0.5</code>. For Nutmeg/Derek I used
+        <code>sigma_high = 8.0</code> and <code>sigma_low = 16.0</code>. For
+        orange cat/dog I used <code>sigma_high = 5.0</code> and
+        <code>sigma_low = 4.0</code>.
+      </p>
+
+      <p>
+        Larger <code>sigma_high</code> removes more low-frequency shape from
+        the high-frequency image, while larger <code>sigma_low</code> keeps
+        only coarser structure from the low-frequency image. Orange cat + dog
+        was my favorite because the dog face reads from far away and the cat
+        texture still shows up close.
+      </p>
+
+      <div class="grid three">
+        <figure>
+          <img src="results/2_2/cat_panda_scales.png" alt="Cat and panda hybrid at multiple scales">
+          <figcaption>Panda + cat scales</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/derek_nutmeg_scales_crop.png" alt="Derek and Nutmeg hybrid at multiple scales">
+          <figcaption>Nutmeg + Derek scales</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_2/dog_orange_cat_scales.png" alt="Dog and orange cat hybrid at multiple scales">
+          <figcaption>Orange cat + dog scales</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        For each pair, I also plotted the process images and the log magnitude
+        of their Fourier transforms: high-frequency input, low-frequency input,
+        high-pass component, low-pass component, and final hybrid.
+      </p>
+
+      <figure class="wide">
+        <img src="results/2_2/cat_panda_process.png" alt="Cat and panda hybrid process">
+        <figcaption>Panda + cat process.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_2/cat_panda_fft.png" alt="Panda and cat FFT">
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_2/dog_orange_cat_process.png" alt="Dog and orange cat hybrid process">
+        <figcaption>Orange cat + dog process.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_2/dog_orange_cat_fft.png" alt="Dog and orange cat Fourier analysis">
+        <figcaption>Orange cat + dog Fourier analysis.</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>Part 2.3: Gaussian and Laplacian Stacks</h2>
+      <p>
+        I implemented Gaussian and Laplacian stacks without downsampling. Each
+        Gaussian level is made by applying another Gaussian blur to the previous
+        level, so all stack images keep the same dimensions. The Laplacian stack
+        stores the difference between adjacent Gaussian levels, with the final
+        level storing the most blurred image.
+      </p>
+
+      <pre><code>gaussian = [image]
+for level in range(1, levels):
+    gaussian.append(blur(gaussian[-1], sigma))
+
+laplacian = []
+for level in range(levels - 1):
+    laplacian.append(gaussian[level] - gaussian[level + 1])
+laplacian.append(gaussian[-1])</code></pre>
+
+      <p>
+        For the Oraple, I also built a Gaussian stack for a vertical mask. At
+        each frequency band, I combined the apple and orange Laplacian levels
+        using the corresponding blurred mask level, then summed all blended
+        levels to reconstruct the final image.
+      </p>
+
+      <p>
+        As a check, summing the Laplacian stack reconstructs the original image:
+        the max reconstruction errors were <code>2.78e-17</code> for the apple
+        and <code>2.78e-17</code> for the orange.
+      </p>
+
+      <div class="grid two">
+        <figure>
+          <img src="results/2_3/apple_gaussian_stack.png" alt="Apple Gaussian stack">
+          <figcaption>Apple Gaussian stack</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/orange_gaussian_stack.png" alt="Orange Gaussian stack">
+          <figcaption>Orange Gaussian stack</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/apple_laplacian_stack.png" alt="Apple Laplacian stack">
+          <figcaption>Apple Laplacian stack</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/orange_laplacian_stack.png" alt="Orange Laplacian stack">
+          <figcaption>Orange Laplacian stack</figcaption>
+        </figure>
+      </div>
+
+      <figure class="wide">
+        <img src="results/2_3/oraple_stack_figure.png" alt="Oraple Laplacian stack contributions">
+        <figcaption>Figure 3.42-style Laplacian stack blending details. The first three rows show levels 0, 2, and 4; the final row shows the summed apple contribution, summed orange contribution, and final Oraple.</figcaption>
+      </figure>
+
+      <div class="grid four">
+        <figure>
+          <img src="results/2_3/apple.png" alt="Apple input image">
+          <figcaption>Apple input</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/orange.png" alt="Orange input image">
+          <figcaption>Orange input</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/simple_split.png" alt="Simple direct split of apple and orange">
+          <figcaption>Simple split</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_3/oraple.png" alt="Multi-resolution Oraple blend">
+          <figcaption>Multi-resolution Oraple</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        The direct split has a visible boundary because all frequencies switch
+        at the same place. The stack blend is smoother because the transition is
+        handled separately at each frequency band.
+      </p>
+    </section>
+
+    <section>
+      <h2>Part 2.4: Multiresolution Blending</h2>
+      <p>
+        I reused the Gaussian and Laplacian stack code from Part 2.3 and moved
+        the actual blending into a general <code>blend_images</code> function.
+        For each level, I combine the Laplacian bands with the matching
+        Gaussian mask level:
+        <code>L = mask * L_A + (1 - mask) * L_B</code>. Summing those blended
+        levels reconstructs the final image.
+      </p>
+
+      <pre><code>for la, lb, m in zip(laplacian_a, laplacian_b, gaussian_mask):
+    blended.append(la * m + lb * (1 - m))
+
+result = sum(blended)</code></pre>
+
+      <figure class="wide">
+        <img src="results/2_4/custom1_comparison.png" alt="Tree and people multiresolution blend comparison">
+        <figcaption>First custom pair: tree and people images blended with a vertical mask. The multiresolution result keeps the seam softer than the direct blend.</figcaption>
+      </figure>
+
+      <div class="grid three">
+        <figure>
+          <img src="results/2_4/custom1_mask.png" alt="Vertical mask">
+          <figcaption>Vertical mask</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_4/custom1_simple.png" alt="Direct vertical blend">
+          <figcaption>Direct blend</figcaption>
+        </figure>
+        <figure>
+          <img src="results/2_4/custom1_result.png" alt="Multiresolution vertical blend">
+          <figcaption>Multiresolution blend</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        I used two image pairs with irregular masks. For the first one, I used
+        the apple and orange cropped from the side-by-side source image and
+        blended them with a wavy seam. The same function works because the mask
+        stack has the same dimensions as the input images at every level.
+      </p>
+
+      <figure class="wide">
+        <img src="results/2_4/custom2_comparison.png" alt="Irregular mask multiresolution blend comparison">
+        <figcaption>Second custom pair: apple and orange blended with an irregular wavy mask.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom2_masked_inputs.png" alt="Masked apple and orange inputs for the favorite blend">
+        <figcaption>Masked input images for my favorite blend. The direct combination shows the hard wavy boundary before multiresolution blending.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom2_process.png" alt="Laplacian stack process for favorite irregular blend">
+        <figcaption>Figure 10-style process visualization for the favorite result. The first three rows show Laplacian levels 0, 2, and 4 weighted by the Gaussian mask stack; the last row shows the summed contributions and final blend.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom3_comparison.png" alt="Circular mask multiresolution blend comparison">
+        <figcaption>Additional apple and orange blend using a circular center mask.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom4_comparison.png" alt="Sun and moon circular mask multiresolution blend comparison">
+        <figcaption>Second irregular pair: sun and moon blended with a circular mask.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom4_masked_inputs.png" alt="Masked sun and moon inputs">
+        <figcaption>Masked inputs for the sun and moon blend.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <img src="results/2_4/custom4_process.png" alt="Laplacian stack process for sun and moon blend">
+        <figcaption>Laplacian stack process for the sun and moon blend, shown in the same style as the favorite result above.</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>Most Important Thing I Learned</h2>
+      <p>
+        The biggest thing I learned is that a visible seam is usually not just
+        about where two images meet. It depends on frequency. Sharp masks work
+        badly because they force high and low frequencies to change at the same
+        hard boundary. Once I used a Gaussian stack for the mask and blended
+        each Laplacian band separately, the transition became much more natural.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
